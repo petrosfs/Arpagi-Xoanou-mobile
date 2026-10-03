@@ -82,12 +82,25 @@ function collectFaceUp(s: GameState, includePot: boolean): Card[] {
   return shuffle(s, out);
 }
 
-function resetSpecialState(s: GameState) {
-  s.matchMode = 'symbol';
+function clearInward(s: GameState) {
   s.inwardActive = false;
+  s.inwardTrigger = null;
   s.lastCardInward = null;
-  s.pendingAllFlip = false;
-  s.outwardFlipper = null;
+}
+
+/** Λήξη του εφέ «βέλη μέσα» αν καλύφθηκαν οι κάρτες που το προκάλεσαν. */
+function refreshInward(s: GameState) {
+  const t = s.inwardTrigger;
+  if (!t || s.lastCardInward) return; // η τελευταία κάρτα δεν καλύπτεται ποτέ
+  const tops = new Set(s.players.filter(inPlay).map((p) => topOf(p)?.id));
+  const ok = t.need === 'any' ? t.ids.some((id) => tops.has(id)) : t.ids.every((id) => tops.has(id));
+  if (!ok) clearInward(s);
+}
+
+function setInward(s: GameState, ids: number[], need: 'any' | 'all') {
+  if (s.inwardTrigger?.need === 'any' && need === 'any') s.inwardTrigger.ids.push(...ids);
+  else s.inwardTrigger = { ids, need };
+  s.inwardActive = true;
 }
 
 function penalty(s: GameState, p: PlayerState, reason: 'wrong' | 'drop' | 'lastColors' | 'lastInward') {
@@ -152,7 +165,7 @@ export function createGame(playerIds: string[], config: Partial<GameConfig> & { 
       id, deck: [], discard: [], status: 'active',
       stats: { duelsWon: 0, duelsLost: 0, wrongGrabs: 0, drops: 0 },
     })),
-    pot: [], turn: 0, matchMode: 'symbol', inwardActive: false, lastCardInward: null,
+    pot: [], turn: 0, matchMode: 'symbol', inwardActive: false, inwardTrigger: null, lastCardInward: null,
     pendingAllFlip: false, outwardFlipper: null, threeRuleActive, decision: null,
     phase: 'playing', finishOrder: [], leftOrder: [], ranking: [], rng: cfg.seed | 0, seq: 0, events: [],
   };
@@ -174,7 +187,7 @@ function afterReveal(s: GameState, flips: { p: PlayerState; card: Card }[], all:
     if (card.kind === 'symbol') continue;
     specialSeen = true;
     if (card.kind === 'inward') {
-      s.inwardActive = true;
+      setInward(s, [card.id], 'any');
       if (last) s.lastCardInward = p.id;
     } else if (card.kind === 'outward') {
       if (last) {
@@ -192,9 +205,9 @@ function afterReveal(s: GameState, flips: { p: PlayerState; card: Card }[], all:
 
   if (s.threeRuleActive) {
     const tops = s.players.filter(inPlay).map(topOf);
-    if (tops.length === 3 && tops.every((t) => t?.kind === 'symbol')) {
+    if (!s.inwardActive && tops.length === 3 && tops.every((t) => t?.kind === 'symbol')) {
       const colors = new Set(tops.map((t) => (t as { color: number }).color));
-      if (colors.size === 1) s.inwardActive = true;
+      if (colors.size === 1) setInward(s, tops.map((t) => (t as Card).id), 'all');
     }
   }
 
@@ -218,12 +231,10 @@ export function flip(state: GameState, playerId: string): GameState {
   const cur = state.players[state.turn];
   if (cur.id !== playerId || !canFlip(cur)) return state;
   const s = clone(state);
-  // Αν κανείς δεν άρπαξε μετά από βέλη μέσα, το εφέ λήγει με το επόμενο γύρισμα.
-  s.inwardActive = false;
-  s.lastCardInward = null;
   const p = s.players[s.turn];
   const card = p.deck.shift() as Card;
   p.discard.push(card);
+  refreshInward(s);
   s.seq++;
   s.events.push({ type: 'flip', playerId, card });
   afterReveal(s, [{ p, card }], false);
@@ -241,6 +252,7 @@ export function allFlip(state: GameState): GameState {
     p.discard.push(card);
     flips.push({ p, card });
   }
+  refreshInward(s);
   s.seq++;
   s.events.push({ type: 'allFlip', flips: flips.map((f) => ({ playerId: f.p.id, card: f.card })) });
   if (flips.length === 0) {
@@ -264,8 +276,7 @@ function better(a: GrabAttempt & { r: number }, b: GrabAttempt & { r: number }):
 
 function doInward(s: GameState, w: PlayerState) {
   const lastId = s.lastCardInward;
-  s.inwardActive = false;
-  s.lastCardInward = null;
+  clearInward(s);
   if (lastId && lastId !== w.id && inPlay(byId(s, lastId))) {
     // Γύρισε βέλη μέσα ως τελευταία κάρτα και δεν τα άρπαξε: μαζεύει όλες τις ανοιχτές.
     const loser = byId(s, lastId);
@@ -308,16 +319,8 @@ function doDuel(s: GameState, w: PlayerState) {
     s.phase = 'decision';
   }
 
-  // Ο επόμενος γύρος ξεκινά από τον πρώτο χαμένο δεξιόστροφα από τον νικητή.
-  const wi = indexOf(s, w.id);
-  const n = s.players.length;
-  for (let k = 1; k <= n; k++) {
-    const i = (wi + k) % n;
-    if (loserIds.includes(s.players[i].id)) {
-      setTurnTo(s, i);
-      break;
-    }
-  }
+  // Απόφαση σχεδιασμού (απόκλιση από τον επίσημο κανόνα): τον επόμενο γύρο τον ξεκινά ο νικητής.
+  setTurnTo(s, indexOf(s, w.id));
 }
 
 /** Ο host συγκεντρώνει τα αρπάγματα ενός παραθύρου και τα δίνει εδώ. Μετράει μόνο το καλύτερο. */
@@ -334,14 +337,12 @@ export function resolveGrabs(state: GameState, attempts: GrabAttempt[]): GameSta
   for (const a of ranked.slice(1)) if (better(a, best)) best = a;
   const w = byId(s, best.playerId);
 
+  // Ποινές: η σειρά συνεχίζει από εκεί που είχε μείνει.
   if (!best.onTarget) {
     penalty(s, w, 'drop');
-    resetSpecialState(s);
-    setTurnTo(s, indexOf(s, w.id));
+    s.matchMode = 'symbol'; // η πτώση του τοτέμ ακυρώνει τα χρωματιστά βέλη
   } else if (!canGrab(s, w.id)) {
     penalty(s, w, 'wrong');
-    resetSpecialState(s);
-    setTurnTo(s, indexOf(s, w.id));
   } else if (s.inwardActive && matchesOf(s, w.id).length > 0) {
     s.decision = { type: 'inwardOrDuel', by: w.id };
     s.phase = 'decision';
@@ -364,8 +365,7 @@ export function applyDecision(state: GameState, playerId: string, choice: Decisi
     const w = byId(s, playerId);
     if (choice.pick === 'inward') doInward(s, w);
     else {
-      s.inwardActive = false;
-      s.lastCardInward = null;
+      clearInward(s);
       doDuel(s, w);
     }
   } else if (dec.type === 'remainder' && choice.type === 'remainder') {
@@ -420,6 +420,7 @@ export function leave(state: GameState, playerId: string): GameState {
   p.status = 'left';
   s.leftOrder.push(playerId);
   if (s.lastCardInward === playerId) s.lastCardInward = null;
+  refreshInward(s); // αν έφυγε με τα βέλη μέσα ορατά, το εφέ λήγει
   s.events.push({ type: 'left', playerId });
   if (s.players[s.turn].id === playerId) advanceTurn(s, s.turn);
   s.seq++;

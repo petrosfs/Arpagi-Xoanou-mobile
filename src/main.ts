@@ -1,11 +1,5 @@
 import './style.css';
-import { APP_VERSION, PHASE } from './version';
+import { go } from './app';
+import { homeScreen } from './screens/home';
 
-const app = document.querySelector<HTMLDivElement>('#app');
-if (app) {
-  app.innerHTML = `
-    <h1>Η Αρπαγή του Ξόανου</h1>
-    <p>Σε κατασκευή · φάση ${PHASE}</p>
-    <p><small>v${APP_VERSION}</small></p>
-  `;
-}
+go(homeScreen);

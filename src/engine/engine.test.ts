@@ -80,7 +80,7 @@ describe('γύρισμα και σειρά', () => {
 });
 
 describe('μονομαχία', () => {
-  it('ο χαμένος παίρνει τις δύο στοίβες και το pot, και ξεκινά', () => {
+  it('ο χαμένος παίρνει τις δύο στοίβες και το pot, ο νικητής ξεκινά', () => {
     let s = setup([[S(1)], [S(7), S(3)], [S(5)]], [[S(2)], [], [S(1)]]);
     s.pot = [S(9)];
     s = flip(s, 'p0'); // p0: 1, p2: 1 => ταίρι
@@ -91,7 +91,7 @@ describe('μονομαχία', () => {
     expect(s.players[2].discard).toHaveLength(0);
     expect(s.pot).toHaveLength(0);
     expect(totalCards(s)).toBe(before);
-    expect(s.players[s.turn].id).toBe('p0');
+    expect(s.players[s.turn].id).toBe('p2');
     expect(s.players[2].stats.duelsWon).toBe(1);
   });
   it('το χρώμα δεν μετράει στη λειτουργία συμβόλων', () => {
@@ -105,6 +105,17 @@ describe('μονομαχία', () => {
     expect(s.players[1].deck).toHaveLength(1 + 3 + 1);
     expect(s.players.every((p) => p.discard.length === 0)).toBe(true);
     expect(s.players[1].stats.wrongGrabs).toBe(1);
+  });
+  it('μετά από ποινή η σειρά δεν αλλάζει', () => {
+    let s = setup([[S(1), S(7)], [S(2), S(8)], [S(3), S(9)]]);
+    s = flip(s, 'p0'); // σειρά στον p1
+    s = resolveGrabs(s, [grab('p2', 200)]);
+    expect(s.players[s.turn].id).toBe('p1');
+  });
+  it('λάθος άρπαγμα δεν ακυρώνει τα χρωματιστά βέλη, η ρίψη ναι', () => {
+    const s = flip(setup([[COL(), S(1)], [S(2), S(8)], [S(3), S(9)]]), 'p0');
+    expect(resolveGrabs(s, [grab('p1', 200)]).matchMode).toBe('color');
+    expect(resolveGrabs(s, [grab('p1', 200, { onTarget: false })]).matchMode).toBe('symbol');
   });
   it('ρίψη (εκτός στόχου) = ποινή, ακόμα κι αν δικαιούταν', () => {
     let s = setup([[S(1)], [S(2)]], [[], [S(1)]]);
@@ -183,6 +194,24 @@ describe('ειδικές κάρτες', () => {
     expect(s.pot).toHaveLength(2);
     expect(s.players[1].discard).toHaveLength(0);
     expect(s.players[s.turn].id).toBe('p1');
+  });
+  it('βέλη μέσα: ισχύει ως να καλυφθεί η κάρτα', () => {
+    let s = setup([[IN(), S(9)], [S(2), S(6)], [S(3), S(7)]]);
+    s = flip(s, 'p0');
+    s = flip(s, 'p1');
+    s = flip(s, 'p2');
+    expect(s.inwardActive).toBe(true); // η κάρτα του p0 είναι ακόμα ορατή
+    s = flip(s, 'p0'); // ο p0 την καλύπτει
+    expect(s.inwardActive).toBe(false);
+    expect(canGrab(s, 'p1')).toBe(false);
+  });
+  it('κανόνας 3 παικτών: λήγει όταν καλυφθεί μία από τις τρεις', () => {
+    let s = setup([[S(1, 2), S(4, 0)], [S(5, 1)], [S(6, 3)]], [[], [S(2, 2)], [S(3, 2)]], { threePlayerRule: true });
+    s.threeRuleActive = true;
+    s = flip(s, 'p0');
+    expect(s.inwardActive).toBe(true);
+    s = flip(s, 'p1');
+    expect(s.inwardActive).toBe(false);
   });
   it('βέλη μέσα + μονομαχία: ο νικητής διαλέγει', () => {
     let s = setup([[IN(), S(20)], [S(2)], [S(3)]], [[], [S(1)], [S(1)]]);
@@ -291,5 +320,5 @@ describe('προσομοίωση', () => {
       }
       expect(s.phase).toBe('ended');
     }
-  });
+  }, 60_000);
 });

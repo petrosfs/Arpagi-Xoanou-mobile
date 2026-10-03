@@ -47,6 +47,8 @@ export const MIN_PLAYERS = 2;
 export const MAX_PLAYERS = 10;
 /** Χρόνοι αντίδρασης με διαφορά ως και τόσα ms θεωρούνται ισοπαλία (αρχική τιμή, ρυθμίζεται με δοκιμές). */
 export const TIE_MS = 30;
+/** Χρόνος για τις αποφάσεις του νικητή. Μετά ο host καλεί autoDecide (τυχαία επιλογή). */
+export const DECISION_TIMEOUT_MS = 15_000;
 
 export type PlayerStatus = 'active' | 'disconnected' | 'left' | 'finished';
 
@@ -109,6 +111,11 @@ export interface GameState {
   turn: number;
   matchMode: 'symbol' | 'color';
   inwardActive: boolean;
+  /**
+   * Τι κρατά ενεργό το εφέ «βέλη μέσα»: οι κάρτες που το προκάλεσαν. Λήγει όταν αρπάξει κάποιος
+   * ή όταν καλυφθούν ('any': αρκεί μία ορατή — βέλη μέσα, 'all': πρέπει όλες — κανόνας 3 παικτών).
+   */
+  inwardTrigger: { ids: number[]; need: 'any' | 'all' } | null;
   /** Παίκτης που γύρισε βέλη μέσα ως τελευταία του κάρτα. */
   lastCardInward: string | null;
   /** Εκκρεμεί ταυτόχρονο γύρισμα (βέλη έξω). */
