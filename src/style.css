@@ -1,0 +1,30 @@
+:root {
+  --ochre: #C8902A;
+  --terracotta: #B5562E;
+  --jungle: #2F6B3A;
+  --aegean: #1F5FA0;
+  --wood: #8B5A2B;
+  --paper: #F5EEDC;
+  --ink: #2C2C2A;
+  color-scheme: light;
+  font-family: system-ui, sans-serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--jungle);
+  color: var(--paper);
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+#app {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  text-align: center;
+  padding: 1.5rem;
+}
+h1 { font-size: 1.75rem; font-weight: 600; margin: 0; }
+p { margin: 0; opacity: 0.85; }
