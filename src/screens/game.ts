@@ -33,6 +33,7 @@ export function gameScreen(root: HTMLElement, opts: SoloOptions) {
       <div class="seats"></div>
       <div class="dropzone"></div>
       <div class="totem" role="button" aria-label="Ξόανο">${XOANO_SVG}</div>
+      <div class="held-label" aria-live="polite"></div>
       <div class="banner"></div>
     </div>
     <div class="me">
@@ -67,13 +68,20 @@ export function gameScreen(root: HTMLElement, opts: SoloOptions) {
       el.style.left = `${cx}px`;
       el.style.top = `${cy}px`;
     }
+    const hl = $('.held-label');
+    hl.style.left = `${cx}px`;
+    hl.style.top = `${cy}px`;
     root.querySelectorAll<HTMLElement>('.seat').forEach((el, i) => {
       el.style.left = `${pos[i].x}px`;
       el.style.top = `${pos[i].y}px`;
     });
   }
 
+  let lastRendered: GameState | null = null;
+
   function render(s: GameState) {
+    const fresh = s !== lastRendered;
+    lastRendered = s;
     const map = game.symbolMap;
     const cb = settings.colorblind;
     const others = s.players.filter((p) => p.id !== HUMAN);
@@ -111,9 +119,19 @@ export function gameScreen(root: HTMLElement, opts: SoloOptions) {
       banner.classList.add('show');
     }
 
+    // Ξόανο σε χέρια (μονομαχία) ή πεσμένο: δεν αρπάζεται.
+    const held = game.totemHeld && s.phase !== 'ended';
+    totem.classList.toggle('held', held);
+    dropzone.classList.toggle('held', held);
+    const hl = $('.held-label');
+    hl.textContent = !held ? '' : game.heldBy ? `Το κρατάει: ${shortName(game.heldBy)}` : 'Το ξόανο έπεσε!';
+    hl.classList.toggle('show', held);
+
     layout();
-    showEvents(s.events);
-    renderModal(s);
+    if (fresh) {
+      showEvents(s.events);
+      renderModal(s);
+    }
     // Χρόνος αντίδρασης: μετράμε από τη στιγμή που ζωγραφίστηκε η νέα κατάσταση.
     requestAnimationFrame(() => game.markDisplayed(s.seq, performance.now()));
     grabLockSeq = -1;
@@ -222,7 +240,7 @@ export function gameScreen(root: HTMLElement, opts: SoloOptions) {
   function onTotemDown(e: PointerEvent) {
     e.preventDefault();
     const s = game.state;
-    if (s.phase !== 'playing' || grabLockSeq === s.seq) return;
+    if (s.phase !== 'playing' || game.totemHeld || grabLockSeq === s.seq) return;
     if (grab) {
       grab.fingers.add(e.pointerId);
       return;
@@ -253,7 +271,7 @@ export function gameScreen(root: HTMLElement, opts: SoloOptions) {
     if (e.target !== dropzone) return;
     e.preventDefault();
     const s = game.state;
-    if (s.phase !== 'playing' || grab || grabLockSeq === s.seq) return;
+    if (s.phase !== 'playing' || game.totemHeld || grab || grabLockSeq === s.seq) return;
     grabLockSeq = s.seq;
     game.humanGrab({ reactionMs: Math.max(0, e.timeStamp - game.displayedAt), fingers: 1, baseScore: 0, onTarget: false });
   }

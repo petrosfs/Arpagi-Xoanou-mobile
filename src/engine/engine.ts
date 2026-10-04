@@ -121,6 +121,17 @@ function checkFinished(s: GameState) {
 }
 
 function endGame(s: GameState) {
+  // Αν εκκρεμεί μοίρασμα καρτών (π.χ. ο νικητής τελείωσε με την ίδια μονομαχία), μοιράζονται
+  // αυτόματα, για να μη χαθούν κάρτες και να είναι σωστή η κατάταξη των υπολοίπων.
+  const d = s.decision;
+  if (d && d.type !== 'inwardOrDuel') {
+    const losers = shuffle(s, d.losers.map((id) => byId(s, id)).filter(inPlay));
+    if (losers.length) {
+      if (d.type === 'remainder') d.cards.forEach((c, i) => losers[i % losers.length].deck.push(c));
+      else losers[0].deck.push(...d.cards);
+    } else s.pot.push(...d.cards);
+  }
+  s.decision = null;
   const remaining = s.players
     .filter(inPlay)
     .sort((a, b) => a.deck.length + a.discard.length - (b.deck.length + b.discard.length))

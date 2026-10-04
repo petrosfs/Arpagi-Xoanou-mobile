@@ -259,6 +259,15 @@ describe('ειδικές κάρτες', () => {
 });
 
 describe('τελευταία κάρτα και τέλος', () => {
+  it('νίκη με εκκρεμή υπόλοιπα: οι κάρτες μοιράζονται, δεν χάνονται', () => {
+    let s = setup([[S(1)], [S(8), S(9)], [S(8), S(9)]], [[S(5), S(6)], [S(1)], [S(1)]]);
+    const total = totalCards(s);
+    s = flip(s, 'p0'); // 3 κάρτες σε 2 χαμένους => 1 υπόλοιπο, και ο p0 τελειώνει
+    s = resolveGrabs(s, [grab('p0', 200)]);
+    expect(s.phase).toBe('ended');
+    expect(s.ranking[0]).toBe('p0');
+    expect(totalCards(s)).toBe(total);
+  });
   it('ξεφορτώνεται τα πάντα => νικά (firstWinner τερματίζει)', () => {
     let s = setup([[S(1)], [S(5), S(6)]], [[], [S(1)]]);
     s = flip(s, 'p0');
