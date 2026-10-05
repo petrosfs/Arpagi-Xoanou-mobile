@@ -1,7 +1,7 @@
 {
   "name": "arpagi-xoanou-mobile",
   "private": true,
-  "version": "0.3.2",
+  "version": "0.5.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -13,5 +13,8 @@
     "typescript": "^7.0.2",
     "vite": "^8.3.2",
     "vitest": "^5.0.3"
+  },
+  "dependencies": {
+    "firebase": "^12.19.0"
   }
 }

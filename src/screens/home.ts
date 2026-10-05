@@ -11,10 +11,15 @@ export function homeScreen(root: HTMLElement) {
     <h1>Η Αρπαγή του Ξόανου</h1>
     <nav class="menu">
       <button class="primary" data-go="solo">Παίξε με bots</button>
-      <button disabled title="Έρχεται σε επόμενη φάση">Online με φίλους · σύντομα</button>
+      <button data-go="online">Online με φίλους</button>
       <button data-go="settings">Ρυθμίσεις</button>
     </nav>
     <p class="version">v${APP_VERSION}</p>`;
   root.querySelector('[data-go="solo"]')!.addEventListener('click', () => go(soloSetupScreen));
   root.querySelector('[data-go="settings"]')!.addEventListener('click', () => go(settingsScreen));
+  // Το online (και το Firebase) φορτώνεται μόνο όταν χρειαστεί.
+  root.querySelector('[data-go="online"]')!.addEventListener('click', async () => {
+    const m = await import('./online');
+    go((r) => m.onlineScreen(r));
+  });
 }

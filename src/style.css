@@ -243,3 +243,34 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 @media (prefers-reduced-motion: reduce) {
   .toast, .totem { transition: none; }
 }
+
+/* ---------- online ---------- */
+.join-row { display: flex; gap: 0.6rem; align-items: stretch; }
+.join-row .join { flex: none; }
+.code-input {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%; min-height: 48px; border-radius: 10px; border: 1.5px solid rgba(245, 238, 220, 0.4);
+  background: rgba(0, 0, 0, 0.2); color: var(--paper); text-align: center;
+  font-size: 1.4rem; font-weight: 600; letter-spacing: 0.3em; text-transform: uppercase;
+}
+.code-input::placeholder { color: rgba(245, 238, 220, 0.3); }
+.field input:not([type]) { min-height: 44px; }
+.code-box { text-align: center; }
+.code-box .hint { margin: 0; }
+.room-code { font-size: 2.6rem; font-weight: 700; letter-spacing: 0.25em; margin: 0.2rem 0 0.6rem; color: var(--ochre); font-variant-numeric: tabular-nums; }
+.players { list-style: none; padding: 0; margin: 0; }
+.players li { display: flex; align-items: center; gap: 0.6rem; padding: 0.55rem 0; border-bottom: 1px solid rgba(245, 238, 220, 0.15); }
+.players .dot { width: 10px; height: 10px; border-radius: 50%; background: #7FBF7F; flex: none; }
+.players li.off .dot { background: rgba(245, 238, 220, 0.3); }
+.players li.off .pname { opacity: 0.6; }
+.players .pname { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.players .badge { font-size: 0.72rem; padding: 0.1rem 0.5rem; border-radius: 999px; background: var(--ochre); color: var(--ink); font-weight: 600; }
+.players .badge.off { background: rgba(245, 238, 220, 0.2); color: var(--paper); }
+.players .kick { min-height: 36px; min-width: 36px; padding: 0; border: none; opacity: 0.7; }
+.setup-summary { margin: 0; padding-left: 1.2rem; line-height: 1.7; }
+.lobby .host-only { display: none; }
+.lobby.is-host .host-only { display: block; }
+.lobby.is-host .start.host-only { display: block; width: 100%; }
+.lobby.is-host .guest-only { display: none; }
+.waiting { text-align: center; }
