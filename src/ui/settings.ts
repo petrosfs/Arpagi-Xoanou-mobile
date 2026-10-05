@@ -2,10 +2,11 @@
 export interface PersonalSettings {
   flipGesture: 'swipe' | 'tap';
   colorblind: boolean;
+  lang: 'auto' | 'el' | 'en';
 }
 
 const KEY = 'arpagi.settings.v1';
-const DEFAULTS: PersonalSettings = { flipGesture: 'swipe', colorblind: false };
+const DEFAULTS: PersonalSettings = { flipGesture: 'swipe', colorblind: false, lang: 'auto' };
 
 export function loadSettings(): PersonalSettings {
   try {

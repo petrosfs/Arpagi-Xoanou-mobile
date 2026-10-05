@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { get, ref, set, type Unsubscribe } from 'firebase/database';
 import type { DecisionChoice, GameState, GrabAttempt } from '../engine';
 import { HostGame } from '../game/host';
@@ -48,14 +49,14 @@ export class OnlineMatch extends BaseSession {
   }
 
   name(id: string) {
-    if (id === this.me) return 'Εσύ';
-    return this.room.view.players[id]?.name ?? 'Παίκτης';
+    if (id === this.me) return t('you');
+    return this.room.view.players[id]?.name ?? t('player');
   }
 
   connection() {
     if (this.host) return '';
     const m = this.hostLink?.mode;
-    return m === 'relay' ? 'Μέσω διακομιστή' : m === 'connecting' ? 'Σύνδεση…' : m === 'closed' ? 'Χωρίς σύνδεση' : '';
+    return m === 'relay' ? t('conn.relay') : m === 'connecting' ? t('conn.connecting') : m === 'closed' ? t('conn.closed') : '';
   }
 
   /** Ξεκινά (ή συνεχίζει) ανάλογα με το ποιος είναι host. */

@@ -1,6 +1,6 @@
 import type { DecisionChoice, GrabAttempt } from '../engine';
 import type { BotLevel } from '../solo/bots';
-import { BOT_LEVELS } from '../solo/bots';
+import { levelLabel } from '../solo/bots';
 import type { HostGame } from './host';
 import type { TableView } from './view';
 
@@ -117,4 +117,4 @@ export class LocalSession extends BaseSession {
   }
 }
 
-export const botLabel = (lv: BotLevel) => BOT_LEVELS[lv].label;
+export const botLabel = (lv: BotLevel) => levelLabel(lv);

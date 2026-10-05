@@ -1,8 +1,8 @@
+import { t } from '../i18n';
 import type { Card } from '../engine';
 import { SYMBOLS, symbolSvg } from './symbols';
 
 export const CARD_COLORS = ['#C8902A', '#B5562E', '#2F6B3A', '#1F5FA0'] as const;
-export const COLOR_NAMES = ['Ώχρα', 'Τερακότα', 'Πράσινο', 'Μπλε'] as const;
 const GREY = '#444441';
 
 function arrows(out: boolean, colors?: readonly string[]): string {
@@ -21,9 +21,9 @@ function arrows(out: boolean, colors?: readonly string[]): string {
 export function cardHtml(card: Card | undefined, symbolMap: number[], colorblind: boolean): string {
   if (!card) return `<div class="card empty"></div>`;
   if (card.kind !== 'symbol') {
-    if (card.kind === 'inward') return `<div class="card special" aria-label="Βέλη μέσα">${arrows(false)}</div>`;
-    if (card.kind === 'outward') return `<div class="card special" aria-label="Βέλη έξω">${arrows(true)}</div>`;
-    return `<div class="card special" aria-label="Χρωματιστά βέλη">${arrows(false, CARD_COLORS)}</div>`;
+    if (card.kind === 'inward') return `<div class="card special" aria-label="${t('card.inward')}">${arrows(false)}</div>`;
+    if (card.kind === 'outward') return `<div class="card special" aria-label="${t('card.outward')}">${arrows(true)}</div>`;
+    return `<div class="card special" aria-label="${t('card.colors')}">${arrows(false, CARD_COLORS)}</div>`;
   }
   const color = CARD_COLORS[card.color];
   const def = SYMBOLS[symbolMap[card.symbol]];

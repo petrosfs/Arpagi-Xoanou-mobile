@@ -1,6 +1,7 @@
+import { t } from '../i18n';
 import { esc, go } from '../app';
 import { isConfigured } from '../net/firebase';
-import { CODE_RE, Room, normalizeCode, type RoomError } from '../net/room';
+import { CODE_RE, Room, normalizeCode } from '../net/room';
 import { DEFAULT_SETUP } from '../ui/setupForm';
 import { homeScreen } from './home';
 import { lobbyScreen } from './lobby';
@@ -21,34 +22,28 @@ const saveName = (n: string) => {
   }
 };
 
-const ERRORS: Record<RoomError | 'name' | 'not-configured', string> = {
-  'not-found': 'Δεν υπάρχει δωμάτιο με αυτόν τον κωδικό.',
-  started: 'Η παρτίδα σε αυτό το δωμάτιο έχει ήδη ξεκινήσει.',
-  full: 'Το δωμάτιο είναι γεμάτο (10 παίκτες).',
-  'bad-code': 'Ο κωδικός έχει 4 χαρακτήρες (γράμματα και αριθμοί).',
-  network: 'Πρόβλημα σύνδεσης. Δοκίμασε ξανά.',
-  name: 'Γράψε ένα ψευδώνυμο (1–16 χαρακτήρες).',
-  'not-configured': 'Το online δεν έχει ρυθμιστεί ακόμα σε αυτή την έκδοση.',
-};
+const ERROR_KEYS = ['not-found', 'started', 'full', 'bad-code', 'network', 'name', 'not-configured'] as const;
+type ErrKey = (typeof ERROR_KEYS)[number];
+const errText = (k: ErrKey) => t(`err.${k}`);
 
 export function onlineScreen(root: HTMLElement, prefillCode = '') {
   root.className = 'screen form';
   root.innerHTML = `
-    <header><button class="back" aria-label="Πίσω">‹</button><h2>Online με φίλους</h2></header>
+    <header><button class="back" aria-label="${t('back')}">‹</button><h2>${t('online.title')}</h2></header>
     <section>
-      <label class="field"><span>Ψευδώνυμο</span>
+      <label class="field"><span>${t('online.nick')}</span>
         <input name="nick" maxlength="16" autocomplete="nickname" value="${esc(loadName())}"></label>
     </section>
     <section>
-      <h3>Νέο δωμάτιο</h3>
-      <button class="primary create">Δημιουργία δωματίου</button>
+      <h3>${t('online.new')}</h3>
+      <button class="primary create">${t('online.create')}</button>
     </section>
     <section>
-      <h3>Έχω κωδικό</h3>
+      <h3>${t('online.haveCode')}</h3>
       <div class="join-row">
         <input name="code" class="code-input" maxlength="4" autocapitalize="characters" autocomplete="off"
-          spellcheck="false" placeholder="K7XR" value="${esc(normalizeCode(prefillCode))}" aria-label="Κωδικός δωματίου">
-        <button class="join">Είσοδος</button>
+          spellcheck="false" placeholder="K7XR" value="${esc(normalizeCode(prefillCode))}" aria-label="${t('online.code')}">
+        <button class="join">${t('online.join')}</button>
       </div>
     </section>
     <p class="error" role="alert"></p>`;
@@ -63,20 +58,20 @@ export function onlineScreen(root: HTMLElement, prefillCode = '') {
   const name = () => {
     const n = nick.value.trim().slice(0, 16);
     if (!n) {
-      err.textContent = ERRORS.name;
+      err.textContent = errText('name');
       return null;
     }
     saveName(n);
     return n;
   };
   const fail = (e: unknown) => {
-    const key = (e instanceof Error ? e.message : '') as keyof typeof ERRORS;
-    err.textContent = ERRORS[key] ?? ERRORS.network;
+    const msg = e instanceof Error ? e.message : '';
+    err.textContent = errText((ERROR_KEYS as readonly string[]).includes(msg) ? (msg as ErrKey) : 'network');
     busy(false);
   };
 
   if (!isConfigured()) {
-    err.textContent = ERRORS['not-configured'];
+    err.textContent = errText('not-configured');
     busy(true);
   }
 
@@ -97,7 +92,7 @@ export function onlineScreen(root: HTMLElement, prefillCode = '') {
     const n = name();
     if (!n) return;
     if (!CODE_RE.test(code.value)) {
-      err.textContent = ERRORS['bad-code'];
+      err.textContent = errText('bad-code');
       return;
     }
     busy(true);

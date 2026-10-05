@@ -274,3 +274,90 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .lobby.is-host .start.host-only { display: block; width: 100%; }
 .lobby.is-host .guest-only { display: none; }
 .waiting { text-align: center; }
+
+/* ---------- κανόνες ---------- */
+.rules-overlay {
+  position: fixed; inset: 0; z-index: 50; background: rgba(0, 0, 0, 0.6);
+  display: flex; justify-content: center; align-items: flex-end;
+  touch-action: pan-y;
+}
+.rules-sheet {
+  background: var(--jungle-dark); width: min(36rem, 100%); max-height: 92dvh;
+  border-radius: 16px 16px 0 0; border-top: 2px solid var(--ochre);
+  display: flex; flex-direction: column;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.rules-sheet header { display: flex; align-items: center; padding: 0.75rem 1rem 0.5rem; }
+.rules-sheet h2 { flex: 1; margin: 0; font-size: 1.3rem; font-weight: 600; }
+.rules-close { min-width: 44px; padding: 0; border: none; font-size: 1.2rem; }
+.rules-body { overflow-y: auto; padding: 0 1.25rem 1.5rem; line-height: 1.55; overscroll-behavior: contain; }
+.rules-body h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 0.4rem; color: var(--ochre); }
+.rules-body p, .rules-body ul { margin: 0.4rem 0; }
+.rules-body ul { padding-left: 1.2rem; }
+.rules-cards { display: flex; gap: 0.6rem; margin: 0.6rem 0; --cw: 64px; }
+.help { min-width: 40px; min-height: 40px; padding: 0; border-radius: 50%; font-weight: 700; }
+.form header .help { margin-left: auto; }
+
+/* ---------- 3D: τραπέζι, στοίβες, γύρισμα, κάρτες που πετούν ---------- */
+/* Μόνο η επιφάνεια του τραπεζιού γέρνει· οι κάρτες μένουν επίπεδες για να διαβάζονται αμέσως. */
+.table-surface {
+  position: absolute;
+  will-change: transform; /* δική της στρώση: ζωγραφίζεται μία φορά */
+  transform: translate(-50%, -50%) perspective(900px) rotateX(38deg);
+  border-radius: 50%;
+  background:
+    radial-gradient(ellipse at 50% 40%, rgba(255, 255, 255, 0.08), transparent 60%),
+    radial-gradient(ellipse at 50% 50%, #2f6b3a 0%, #24552d 70%, #1c4423 100%);
+  box-shadow:
+    inset 0 0 0 6px #6e4520,
+    inset 0 0 0 9px #8b5a2b,
+    inset 0 10px 30px rgba(0, 0, 0, 0.35),
+    0 14px 0 #4a2e14,
+    0 30px 40px rgba(0, 0, 0, 0.45);
+  pointer-events: none;
+}
+.seat .holder, .game .my-discard { position: relative; isolation: isolate; }
+.holder.stack1::before, .holder.stack2::before, .holder.stack2::after,
+.my-discard.stack1::before, .my-discard.stack2::before, .my-discard.stack2::after {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: var(--cw);
+  aspect-ratio: 5 / 7;
+  border-radius: calc(var(--cw) * 0.1);
+  background: #e6dcc2;
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.35);
+  z-index: -1;
+}
+.holder.stack2::after, .my-discard.stack2::after { left: 6px; top: 6px; background: #d9ceb2; z-index: -2; }
+.card { box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25), 0 4px 0 rgba(0, 0, 0, 0.08); }
+.card.empty { box-shadow: none; }
+.my-deck[data-depth='1'] .card.back { box-shadow: 2px 2px 0 #8e3f1f, 0 3px 0 rgba(0, 0, 0, 0.2); }
+.my-deck[data-depth='2'] .card.back { box-shadow: 2px 2px 0 #8e3f1f, 4px 4px 0 #7a361a, 0 3px 0 rgba(0, 0, 0, 0.2); }
+.my-deck[data-depth='3'] .card.back { box-shadow: 2px 2px 0 #8e3f1f, 4px 4px 0 #7a361a, 6px 6px 0 #672d16, 0 3px 0 rgba(0, 0, 0, 0.2); }
+.my-deck[data-depth='4'] .card.back { box-shadow: 2px 2px 0 #8e3f1f, 4px 4px 0 #7a361a, 6px 6px 0 #672d16, 8px 8px 0 #552512, 0 3px 0 rgba(0, 0, 0, 0.2); }
+
+/* Γύρισμα κάρτας: περιστροφή 100 ms (μόνο transform, το αναλαμβάνει η κάρτα γραφικών). */
+.flip-in > .card { animation: flip-in 100ms ease-out; transform-origin: 50% 50%; backface-visibility: hidden; }
+@keyframes flip-in {
+  from { transform: perspective(500px) rotateY(-90deg); }
+  to { transform: perspective(500px) rotateY(0deg); }
+}
+
+/* Κάρτες που πετούν προς τον χαμένο. */
+.game .fx { position: fixed; inset: 0; pointer-events: none; perspective: 900px; z-index: 20; }
+.fly-card {
+  position: absolute;
+  width: var(--cw);
+  aspect-ratio: 5 / 7;
+  border-radius: calc(var(--cw) * 0.1);
+  background: var(--terracotta);
+  background-image: repeating-linear-gradient(45deg, transparent 0 8px, rgba(0, 0, 0, 0.12) 8px 10px);
+  box-shadow: 0 4px 0 rgba(0, 0, 0, 0.3);
+  will-change: transform, opacity;
+}
+@media (prefers-reduced-motion: reduce) {
+  .flip-in > .card { animation: none; }
+  .table-surface { transform: translate(-50%, -50%); }
+}

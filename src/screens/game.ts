@@ -1,3 +1,5 @@
+import { t } from '../i18n';
+import { openRules } from './rules';
 import { esc, go } from '../app';
 import type { GameEvent } from '../engine';
 import { botLabel, type Session } from '../game/session';
@@ -12,6 +14,10 @@ import { summaryScreen } from './summary';
 
 /** Παράθυρο μέτρησης δαχτύλων μετά το πρώτο άγγιγμα στο ξόανο (αρχική τιμή, ρυθμίζεται με δοκιμές). */
 const FINGER_WINDOW_MS = 80;
+/** Διάρκεια γυρίσματος κάρτας (3D). Ο χρόνος αντίδρασης μετράει από τη μέση του, όταν το σύμβολο φαίνεται. */
+const FLIP_MS = 100;
+const FLY_MS = 420;
+const reducedMotion = () => window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
 
 export interface GameScreenOptions {
   /** Νέα παρτίδα με τις ίδιες ρυθμίσεις (solo). */
@@ -31,23 +37,26 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
   root.className = 'game';
   root.innerHTML = `
     <div class="hud">
-      <button class="quit" aria-label="Έξοδος">✕</button>
+      <button class="quit" aria-label="${t('game.quit')}">✕</button>
       <span class="status" aria-live="polite"></span>
       <span class="conn"></span>
       <span class="pot"></span>
+      <button class="help" aria-label="${t('home.rules')}">?</button>
     </div>
     <div class="table">
+      <div class="table-surface" aria-hidden="true"></div>
       <div class="seats"></div>
       <div class="dropzone"></div>
-      <div class="totem" role="button" aria-label="Ξόανο">${XOANO_SVG}</div>
+      <div class="totem" role="button" aria-label="${t('game.totem')}">${XOANO_SVG}</div>
       <div class="held-label" aria-live="polite"></div>
       <div class="banner"></div>
     </div>
     <div class="me">
       <div class="my-discard"></div>
-      <div class="my-deck" aria-label="Η στοίβα σου"></div>
+      <div class="my-deck" aria-label="${t('game.myDeck')}"></div>
       <div class="my-info"></div>
     </div>
+    <div class="fx" aria-hidden="true"></div>
     <div class="toast" aria-live="assertive"></div>
     <div class="modal" hidden></div>`;
 
@@ -60,6 +69,9 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
   let ended = false;
   let lastRendered: TableView | null = null;
   let grabLockSeq = -1;
+  /** Η πάνω κάρτα κάθε παίκτη στην προηγούμενη απόδοση, για να ξέρουμε ποια μόλις γύρισε. */
+  const lastTop = new Map<string, number>();
+  let surfaceKey = '';
 
   // ---------- απόδοση ----------
 
@@ -71,6 +83,16 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     root.style.setProperty('--cw', `${cardW}px`);
     root.style.setProperty('--th', `${totemH}px`);
     const { cx, cy } = tableCenter(w, h);
+    // Η επιφάνεια ζωγραφίζεται μία φορά· αλλάζει μόνο αν αλλάξει το μέγεθος της οθόνης.
+    const key = `${w}x${h}`;
+    if (surfaceKey !== key) {
+      surfaceKey = key;
+      const surface = $('.table-surface');
+      surface.style.left = `${cx}px`;
+      surface.style.top = `${cy}px`;
+      surface.style.width = `${w * 0.94}px`;
+      surface.style.height = `${h * 0.86}px`;
+    }
     for (const el of [totem, dropzone, $('.held-label')]) {
       el.style.left = `${cx}px`;
       el.style.top = `${cy}px`;
@@ -87,35 +109,46 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     const map = session.symbolMap;
     const cb = settings.colorblind;
     const playing = v.phase === 'playing' && !v.pendingAllFlip;
+    // Ποιες κάρτες μόλις γύρισαν (για το εφέ γυρίσματος).
+    const flipped = new Set<string>();
+    for (const p of v.players) {
+      const id = p.top?.id ?? -1;
+      if (p.top && lastTop.get(p.id) !== id && v.events.some((e) => e.type === 'flip' || e.type === 'allFlip')) flipped.add(p.id);
+      lastTop.set(p.id, id);
+    }
+    const stack = (n: number) => (n > 2 ? 'stack2' : n > 1 ? 'stack1' : '');
     $('.seats').innerHTML = v.players
       .filter((p) => p.id !== me)
       .map((p) => {
         const turn = v.turnId === p.id && playing;
-        return `<div class="seat ${turn ? 'turn' : ''} ${p.status}">
+        return `<div class="seat ${turn ? 'turn' : ''} ${p.status}" data-id="${esc(p.id)}">
           <div class="name">${esc(session.name(p.id))}</div>
-          <div class="holder">${cardHtml(p.top ?? undefined, map, cb)}<span class="count" title="Κάρτες">${p.deckCount + p.discardCount}</span></div></div>`;
+          <div class="holder ${stack(p.discardCount)} ${flipped.has(p.id) ? 'flip-in' : ''}">${cardHtml(p.top ?? undefined, map, cb)}<span class="count" title="${t('card.count')}">${p.deckCount + p.discardCount}</span></div></div>`;
       })
       .join('');
     const mine = v.players.find((p) => p.id === me)!;
-    $('.my-discard').innerHTML = cardHtml(mine.top ?? undefined, map, cb);
+    const myDiscard = $('.my-discard');
+    myDiscard.innerHTML = cardHtml(mine.top ?? undefined, map, cb);
+    myDiscard.className = `my-discard ${stack(mine.discardCount)} ${flipped.has(me) ? 'flip-in' : ''}`;
     deckEl.innerHTML = mine.deckCount ? backHtml(mine.deckCount) : `<div class="card empty"></div>`;
+    deckEl.dataset.depth = String(Math.min(4, Math.ceil(mine.deckCount / 6)));
     const myTurn = v.turnId === me && playing && !v.held && mine.deckCount > 0;
     deckEl.classList.toggle('turn', myTurn);
     $('.my-info').textContent = myTurn
-      ? settings.flipGesture === 'swipe' ? 'Σύρε πάνω-κάτω για να γυρίσεις' : 'Πάτα για να γυρίσεις'
-      : `Κάρτες: ${mine.deckCount + mine.discardCount}`;
-    $('.pot').textContent = v.potCount ? `Κάτω από το ξόανο: ${v.potCount}` : '';
+      ? t(settings.flipGesture === 'swipe' ? 'game.flipSwipe' : 'game.flipTap')
+      : t('game.cards', { n: mine.deckCount + mine.discardCount });
+    $('.pot').textContent = v.potCount ? t('game.pot', { n: v.potCount }) : '';
 
     const banner = $('.banner');
     banner.className = 'banner';
     if (v.pendingAllFlip) {
-      banner.textContent = 'Βέλη έξω: όλοι γυρίζουν μαζί!';
+      banner.textContent = t('game.banner.out');
       banner.classList.add('show');
     } else if (v.inwardActive) {
-      banner.textContent = 'Βέλη μέσα: όλοι στο ξόανο!';
+      banner.textContent = t('game.banner.in');
       banner.classList.add('show', 'hot');
     } else if (v.matchMode === 'color') {
-      banner.textContent = 'Ταίρι με χρώμα';
+      banner.textContent = t('game.banner.color');
       banner.classList.add('show');
     }
 
@@ -123,21 +156,73 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     totem.classList.toggle('held', held);
     dropzone.classList.toggle('held', held);
     const hl = $('.held-label');
-    hl.textContent = !held ? '' : v.heldBy ? `Το κρατάει: ${session.name(v.heldBy)}` : 'Το ξόανο έπεσε!';
+    hl.textContent = !held ? '' : v.heldBy ? t('game.heldBy', { name: session.name(v.heldBy) }) : t('game.fell');
     hl.classList.toggle('show', held);
 
     layout();
     if (fresh) {
       showEvents(v.events);
+      flyEvents(v);
       renderModal(v);
       grabLockSeq = -1;
     }
-    // Χρόνος αντίδρασης: μετράμε από τη στιγμή που ζωγραφίστηκε η νέα κατάσταση.
-    requestAnimationFrame(() => session.markDisplayed(v.seq, performance.now()));
+    // Χρόνος αντίδρασης: από τη στιγμή που ζωγραφίστηκε η νέα κατάσταση. Αν γύρισε κάρτα με εφέ,
+    // από τη μέση του γυρίσματος, όταν το σύμβολο έχει ήδη φανεί.
+    const flipDelay = flipped.size && !reducedMotion() ? FLIP_MS / 2 : 0;
+    requestAnimationFrame(() => session.markDisplayed(v.seq, performance.now() + flipDelay));
 
     if (v.phase === 'ended' && !ended) {
       ended = true;
       setTimeout(() => go((r) => summaryScreen(r, session, opts)), 1800);
+    }
+  }
+
+  // ---------- κάρτες που πετούν (3D) ----------
+
+  /** Κέντρο ενός παίκτη ('' = το ξόανο) σε συντεταγμένες της οθόνης. */
+  function spot(id: string): { x: number; y: number } | null {
+    const el =
+      id === '' ? totem : id === me ? $('.my-discard') : root.querySelector<HTMLElement>(`.seat[data-id="${CSS.escape(id)}"] .holder`);
+    if (!el) return null;
+    const r = el.getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }
+
+  function fly(fromIds: string[], toId: string) {
+    const to = spot(toId);
+    if (!to || reducedMotion()) return;
+    const fx = $('.fx');
+    const per = fromIds.length > 4 ? 1 : 2;
+    fromIds.slice(0, 10).forEach((fromId, i) => {
+      const from = spot(fromId);
+      if (!from) return;
+      for (let k = 0; k < per; k++) {
+        const c = document.createElement('div');
+        c.className = 'fly-card';
+        c.style.left = `${from.x}px`;
+        c.style.top = `${from.y}px`;
+        fx.appendChild(c);
+        const dx = to.x - from.x;
+        const dy = to.y - from.y;
+        const delay = i * 60 + k * 45;
+        c.animate(
+          [
+            { transform: 'translate(-50%, -50%) translateZ(0) rotateX(0deg) rotateZ(0deg)', opacity: 1 },
+            { transform: `translate(calc(-50% + ${dx / 2}px), calc(-50% + ${dy / 2}px)) translateZ(60px) rotateX(35deg) rotateZ(${(k - 1) * 12}deg)`, opacity: 1, offset: 0.5 },
+            { transform: `translate(calc(-50% + ${dx}px), calc(-50% + ${dy}px)) translateZ(0) rotateX(0deg) rotateZ(${(k - 1) * 6}deg)`, opacity: 0.2 },
+          ],
+          { duration: FLY_MS, delay, easing: 'cubic-bezier(.3,.7,.4,1)', fill: 'backwards' },
+        ).onfinish = () => c.remove();
+        setTimeout(() => c.remove(), FLY_MS + delay + 100);
+      }
+    });
+  }
+
+  function flyEvents(v: TableView) {
+    for (const e of v.events) {
+      if (e.type === 'duel') for (const l of e.losers) fly([e.winner, ''], l);
+      else if (e.type === 'inward') fly([e.winner], '');
+      else if (e.type === 'penalty') fly([...v.players.map((p) => p.id).filter((id) => id !== e.playerId), ''], e.playerId);
     }
   }
 
@@ -154,19 +239,16 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     const nm = (id: string) => session.name(id);
     for (const e of events) {
       if (e.type === 'duel') {
-        if (e.winner === me) toast('Κέρδισες τη μονομαχία!', 'good');
-        else if (e.losers.includes(me)) toast(`Έχασες από ${nm(e.winner)}`, 'bad');
-        else toast(`${nm(e.winner)} κέρδισε τη μονομαχία`);
-      } else if (e.type === 'inward') toast(e.winner === me ? 'Πρώτος στο ξόανο!' : `${nm(e.winner)} πρώτος στο ξόανο`);
+        if (e.winner === me) toast(t('game.won'), 'good');
+        else if (e.losers.includes(me)) toast(t('game.lostTo', { name: nm(e.winner) }), 'bad');
+        else toast(t('game.wonOther', { name: nm(e.winner) }));
+      } else if (e.type === 'inward') toast(e.winner === me ? t('game.firstMe') : t('game.firstOther', { name: nm(e.winner) }));
       else if (e.type === 'penalty') {
-        if (e.playerId === me)
-          toast(e.reason === 'drop' ? 'Έριξες το ξόανο!' : e.reason === 'wrong' ? 'Λάθος άρπαγμα!' : 'Μαζεύεις τις ανοιχτές', 'bad');
-        else {
-          const why = e.reason === 'drop' ? 'έριξε το ξόανο' : e.reason === 'wrong' ? 'λάθος άρπαγμα' : 'μαζεύει τις ανοιχτές';
-          toast(`${nm(e.playerId)}: ${why}`);
-        }
-      } else if (e.type === 'left') toast(`${nm(e.playerId)} αποχώρησε`);
-      else if (e.type === 'ended') toast('Τέλος παρτίδας');
+        const kind = e.reason === 'drop' ? 'drop' : e.reason === 'wrong' ? 'wrong' : 'collect';
+        if (e.playerId === me) toast(t(`game.${kind}Me`), 'bad');
+        else toast(t(`game.${kind}Other`, { name: nm(e.playerId) }));
+      } else if (e.type === 'left') toast(t('game.left', { name: nm(e.playerId) }));
+      else if (e.type === 'ended') toast(t('game.over'));
     }
   }
 
@@ -181,24 +263,24 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     modal.hidden = false;
     const nm = (id: string) => esc(fullName(session, id));
     if (d.type === 'inwardOrDuel') {
-      modal.innerHTML = `<div class="dialog"><h3>Τι ισχύει;</h3><p class="countdown"></p>
-        <button class="primary" data-pick="inward">Βέλη μέσα: η στοίβα μου κάτω από το ξόανο</button>
-        <button data-pick="duel">Μονομαχία: ο αντίπαλος παίρνει τις κάρτες</button></div>`;
+      modal.innerHTML = `<div class="dialog"><h3>${t('dec.which')}</h3><p class="countdown"></p>
+        <button class="primary" data-pick="inward">${t('dec.inward')}</button>
+        <button data-pick="duel">${t('dec.duel')}</button></div>`;
       modal.querySelectorAll<HTMLButtonElement>('[data-pick]').forEach((b) =>
         b.addEventListener('click', () => session.decide({ type: 'inwardOrDuel', pick: b.dataset.pick as 'inward' | 'duel' })),
       );
     } else if (d.type === 'chooseLoser') {
-      modal.innerHTML = `<div class="dialog"><h3>Ποιος παίρνει τις κάρτες σου;</h3><p class="countdown"></p>
+      modal.innerHTML = `<div class="dialog"><h3>${t('dec.whoTakes')}</h3><p class="countdown"></p>
         ${d.losers.map((id) => `<button data-loser="${esc(id)}">${nm(id)}</button>`).join('')}</div>`;
       modal.querySelectorAll<HTMLButtonElement>('[data-loser]').forEach((b) =>
         b.addEventListener('click', () => session.decide({ type: 'chooseLoser', loser: b.dataset.loser! })),
       );
     } else {
       const picked = new Set<string>();
-      modal.innerHTML = `<div class="dialog"><h3>Περισσεύ${d.count > 1 ? 'ουν' : 'ει'} ${d.count} κάρτ${d.count > 1 ? 'ες' : 'α'}</h3>
-        <p>Διάλεξε ${d.count} ${d.count > 1 ? 'παίκτες που παίρνουν' : 'παίκτη που παίρνει'} από μία.</p><p class="countdown"></p>
+      modal.innerHTML = `<div class="dialog"><h3>${t('dec.remainder', { n: d.count })}</h3>
+        <p>${t('dec.remainderHint', { n: d.count })}</p><p class="countdown"></p>
         ${d.losers.map((id) => `<button class="toggle" data-loser="${esc(id)}">${nm(id)}</button>`).join('')}
-        <button class="primary confirm" disabled>Επιβεβαίωση</button></div>`;
+        <button class="primary confirm" disabled>${t('dec.confirm')}</button></div>`;
       const confirm = modal.querySelector<HTMLButtonElement>('.confirm')!;
       modal.querySelectorAll<HTMLButtonElement>('[data-loser]').forEach((b) =>
         b.addEventListener('click', () => {
@@ -221,17 +303,17 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
     const left = (ms: number) => Math.max(0, Math.ceil((ms - since) / 1000));
     const status = $('.status');
     $('.conn').textContent = session.connection();
-    if (v.phase === 'ended') status.textContent = 'Τέλος';
+    if (v.phase === 'ended') status.textContent = t('game.end');
     else if (v.phase === 'decision') {
-      status.textContent = v.decision?.by === me ? 'Αποφάσισε' : 'Ο νικητής αποφασίζει…';
+      status.textContent = v.decision?.by === me ? t('game.decide') : t('game.winnerDeciding');
       const cd = modal.querySelector('.countdown');
-      if (cd && v.decisionLeftMs) cd.textContent = `${left(v.decisionLeftMs)} δευτ.`;
+      if (cd && v.decisionLeftMs) cd.textContent = t('game.seconds', { n: left(v.decisionLeftMs) });
     } else if (v.pendingAllFlip) {
-      status.textContent = `Όλοι γυρίζουν σε ${left(v.allFlipLeftMs)}…`;
+      status.textContent = t('game.allFlipIn', { n: left(v.allFlipLeftMs) });
     } else if (v.turnId === me && v.turnLeftMs) {
       const s = left(v.turnLeftMs);
-      status.textContent = `Σειρά σου · ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
-    } else status.textContent = `Σειρά: ${session.name(v.turnId)}`;
+      status.textContent = t('game.yourTurn', { time: `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}` });
+    } else status.textContent = t('game.turnOf', { name: session.name(v.turnId) });
   }, 200);
 
   // ---------- άρπαγμα ----------
@@ -299,10 +381,12 @@ export function gameScreen(root: HTMLElement, session: Session, opts: GameScreen
   // ---------- έξοδος ----------
 
   $('.quit').addEventListener('click', () => {
-    if (!confirm('Να εγκαταλείψεις την παρτίδα;')) return;
+    if (!confirm(t('game.quitConfirm'))) return;
     session.quit();
     go(homeScreen);
   });
+
+  $('.help').addEventListener('click', () => openRules());
 
   const onResize = () => layout();
   window.addEventListener('resize', onResize);

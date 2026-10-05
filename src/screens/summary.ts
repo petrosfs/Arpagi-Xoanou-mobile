@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { esc, go } from '../app';
 import { botLabel, type Session } from '../game/session';
 import type { GameScreenOptions } from './game';
@@ -21,17 +22,16 @@ export function summaryScreen(root: HTMLElement, session: Session, opts: GameScr
   const winner = v.ranking[0];
   root.className = 'screen summary';
   root.innerHTML = `
-    <h2>${winner === session.me ? 'Κέρδισες!' : `Νίκησε: ${esc(session.name(winner))}`}</h2>
+    <h2>${winner === session.me ? t('sum.youWon') : esc(t('sum.winner', { name: session.name(winner) }))}</h2>
     <div class="stats-wrap"><table class="stats">
-      <thead><tr><th scope="col">Παίκτης</th><th scope="col">Μέσος</th><th scope="col">Καλύτ.</th>
-        <th scope="col">Νίκες</th><th scope="col">Λάθη</th><th scope="col">Ρίψεις</th></tr></thead>
+      <thead><tr><th scope="col">${t('sum.player')}</th><th scope="col">${t('sum.avg')}</th><th scope="col">${t('sum.best')}</th>
+        <th scope="col">${t('sum.wins')}</th><th scope="col">${t('sum.wrong')}</th><th scope="col">${t('sum.drops')}</th></tr></thead>
       <tbody>${rows.join('')}</tbody></table></div>
-    <p class="note">Μέσος / Καλύτ.: χρόνος αντίδρασης σε ms (χιλιοστά του δευτερολέπτου).
-      Νίκες: μονομαχίες που κέρδισε. Λάθη: λάθος αρπάγματα. Ρίψεις: φορές που έριξε το ξόανο.</p>
+    <p class="note">${t('sum.note')}</p>
     <nav class="menu">
-      ${opts.replay ? '<button class="primary again">Νέα παρτίδα</button>' : ''}
-      ${opts.exit ? '<button class="primary back-room">Πίσω στο δωμάτιο</button>' : ''}
-      <button class="to-home">Αρχική</button>
+      ${opts.replay ? `<button class="primary again">${t('sum.again')}</button>` : ''}
+      ${opts.exit ? `<button class="primary back-room">${t('sum.room')}</button>` : ''}
+      <button class="to-home">${t('sum.home')}</button>
     </nav>`;
   root.querySelector('.again')?.addEventListener('click', () => opts.replay!());
   root.querySelector('.back-room')?.addEventListener('click', () => opts.exit!());

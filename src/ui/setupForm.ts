@@ -1,3 +1,4 @@
+import { t } from '../i18n';
 import { MAX_SYMBOLS, MIN_SYMBOLS, type GameConfig } from '../engine';
 import { DEFAULT_SYMBOLS, SYMBOLS, symbolSvg } from './symbols';
 
@@ -27,31 +28,31 @@ export function mountSetupForm(
   const chosen = new Set<number>(initial.symbols);
   root.innerHTML = `
     <section>
-      <h3>Σύμβολα <span class="sym-count"></span></h3>
-      <p class="hint">Διάλεξε ${MIN_SYMBOLS}–${MAX_SYMBOLS}. Λιγότερα σύμβολα σημαίνει συχνότερες μονομαχίες.</p>
+      <h3>${t('setup.symbols')} <span class="sym-count"></span></h3>
+      <p class="hint">${t('setup.symbolsHint', { min: MIN_SYMBOLS, max: MAX_SYMBOLS })}</p>
       <div class="sym-grid"></div>
     </section>
     <section>
-      <h3>Κανόνες</h3>
-      <label class="field"><span>Χρόνος για να γυρίσεις κάρτα (δευτ.)</span>
+      <h3>${t('setup.rules')}</h3>
+      <label class="field"><span>${t('setup.timer')}</span>
         <input type="number" name="timer" min="5" max="180" step="1" value="${initial.turnTimerS}"></label>
-      <label class="field"><span>Πολλοί χαμένοι</span>
+      <label class="field"><span>${t('setup.dist')}</span>
         <select name="dist">
-          <option value="equal">Ίσο μοίρασμα, τα υπόλοιπα τα διαλέγει ο νικητής</option>
-          <option value="winnerChooses">Όλα σε έναν χαμένο, τον διαλέγει ο νικητής</option>
+          <option value="equal">${t('setup.dist.equal')}</option>
+          <option value="winnerChooses">${t('setup.dist.winner')}</option>
         </select></label>
-      <label class="field"><span>Τέλος παρτίδας</span>
+      <label class="field"><span>${t('setup.end')}</span>
         <select name="end">
-          <option value="firstWinner">Με τον πρώτο νικητή</option>
-          <option value="fullRanking">Πλήρης κατάταξη</option>
+          <option value="firstWinner">${t('setup.end.first')}</option>
+          <option value="fullRanking">${t('setup.end.full')}</option>
         </select></label>
-      ${opts.showLeaver ? `<label class="field"><span>Κάρτες όποιου αποχωρεί</span>
+      ${opts.showLeaver ? `<label class="field"><span>${t('setup.leaver')}</span>
         <select name="leaver">
-          <option value="pot">Πάνε κάτω από το ξόανο</option>
-          <option value="remove">Βγαίνουν από το παιχνίδι</option>
+          <option value="pot">${t('setup.leaver.pot')}</option>
+          <option value="remove">${t('setup.leaver.remove')}</option>
         </select></label>` : ''}
       <label class="check"><input type="checkbox" name="three" ${initial.config.threePlayerRule ? 'checked' : ''}>
-        <span>Κανόνας 3 παικτών (χωρίς χρωματιστά βέλη, τρία ίδια χρώματα = βέλη μέσα)</span></label>
+        <span>${t('setup.three')}</span></label>
     </section>`;
 
   const sel = (n: string) => root.querySelector<HTMLSelectElement>(`select[name="${n}"]`);
@@ -64,7 +65,7 @@ export function mountSetupForm(
     root.querySelector('.sym-count')!.textContent = `(${chosen.size})`;
     grid.innerHTML = SYMBOLS.map(
       (s, i) =>
-        `<button type="button" class="sym ${chosen.has(i) ? 'on' : ''}" data-sym="${i}" aria-pressed="${chosen.has(i)}" aria-label="Σύμβολο ${s.no}">
+        `<button type="button" class="sym ${chosen.has(i) ? 'on' : ''}" data-sym="${i}" aria-pressed="${chosen.has(i)}" aria-label="${t('card.symbol', { no: s.no })}">
           ${symbolSvg(s, 'currentColor', 32)}</button>`,
     ).join('');
   };
@@ -83,10 +84,10 @@ export function mountSetupForm(
   return {
     read() {
       if (chosen.size < MIN_SYMBOLS || chosen.size > MAX_SYMBOLS)
-        return { ok: false, error: `Διάλεξε από ${MIN_SYMBOLS} ως ${MAX_SYMBOLS} σύμβολα (τώρα: ${chosen.size}).` };
+        return { ok: false, error: t('setup.err.symbols', { min: MIN_SYMBOLS, max: MAX_SYMBOLS, n: chosen.size }) };
       const timer = Math.round(+root.querySelector<HTMLInputElement>('input[name="timer"]')!.value);
       if (!(timer >= 5 && timer <= 180))
-        return { ok: false, error: 'Ο χρόνος για να γυρίσεις κάρτα πρέπει να είναι από 5 ως 180 δευτερόλεπτα.' };
+        return { ok: false, error: t('setup.err.timer') };
       return {
         ok: true,
         setup: {
@@ -107,11 +108,11 @@ export function mountSetupForm(
 /** Σύντομη περιγραφή των ρυθμίσεων για όσους δεν είναι host. */
 export function describeSetup(s: MatchSetup): string[] {
   return [
-    `${s.symbols.length} σύμβολα`,
-    `${s.turnTimerS} δευτ. για να γυρίσεις κάρτα`,
-    s.config.distribution === 'equal' ? 'Πολλοί χαμένοι: ίσο μοίρασμα' : 'Πολλοί χαμένοι: όλα σε έναν',
-    s.config.endMode === 'firstWinner' ? 'Τέλος με τον πρώτο νικητή' : 'Πλήρης κατάταξη',
-    s.config.leaverCards === 'pot' ? 'Όποιος φεύγει: κάρτες στο ξόανο' : 'Όποιος φεύγει: κάρτες εκτός',
-    s.config.threePlayerRule ? 'Κανόνας 3 παικτών: ναι' : 'Κανόνας 3 παικτών: όχι',
+    t('setup.sum.symbols', { n: s.symbols.length }),
+    t('setup.sum.timer', { n: s.turnTimerS }),
+    t(s.config.distribution === 'equal' ? 'setup.sum.dist.equal' : 'setup.sum.dist.winner'),
+    t(s.config.endMode === 'firstWinner' ? 'setup.sum.end.first' : 'setup.sum.end.full'),
+    t(s.config.leaverCards === 'pot' ? 'setup.sum.leaver.pot' : 'setup.sum.leaver.remove'),
+    t(s.config.threePlayerRule ? 'setup.sum.three.on' : 'setup.sum.three.off'),
   ];
 }
