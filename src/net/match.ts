@@ -1,3 +1,4 @@
+import type { MatchStats } from '../game/stats';
 import { t } from '../i18n';
 import { get, ref, set, type Unsubscribe } from 'firebase/database';
 import type { DecisionChoice, GameState, GrabAttempt } from '../engine';
@@ -127,7 +128,7 @@ export class OnlineMatch extends BaseSession {
     this.hostLink?.close();
     this.hostLink = null;
     const meta = this.room.view.meta!;
-    let resume: { state: GameState; reactions: Record<string, number[]> } | undefined;
+    let resume: { state: GameState; reactions: Record<string, number[]>; stats?: MatchStats } | undefined;
     if (prevHost && prevHost !== this.me) {
       // Συνέχεια από την τελευταία αποθηκευμένη κατάσταση του προηγούμενου host.
       try {
@@ -224,7 +225,7 @@ export class OnlineMatch extends BaseSession {
     this.saveTimer = 0;
     if (!this.host) return;
     this.lastSave = performance.now();
-    const j = JSON.stringify({ state: this.host.state, reactions: this.host.reactions });
+    const j = JSON.stringify({ state: this.host.state, reactions: this.host.reactions, stats: this.host.stats.data });
     set(ref(this.room.db, `rooms/${this.room.code}/state`), { j }).catch(() => {});
   }
 
@@ -301,7 +302,7 @@ function emptyView(order: string[], me: string): TableView {
   return {
     seq: -1, phase: 'playing', turnId: players[0].id, matchMode: 'symbol', inwardActive: false, pendingAllFlip: false,
     potCount: 0, players, decision: null, events: [], ranking: [], held: true, heldBy: null,
-    turnLeftMs: 0, decisionLeftMs: 0, allFlipLeftMs: 0, reactions: {},
+    turnLeftMs: 0, decisionLeftMs: 0, allFlipLeftMs: 0, reactions: {}, stats: null,
   };
 }
 

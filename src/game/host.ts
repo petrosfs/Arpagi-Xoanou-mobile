@@ -1,3 +1,4 @@
+import { StatsRecorder, type MatchStats } from './stats';
 import {
   DECISION_TIMEOUT_MS, allFlip, applyDecision, autoDecide, canGrab, createGame, flip, leave, resolveGrabs,
   setConnected, type DecisionChoice, type GameConfig, type GameState, type GrabAttempt,
@@ -27,7 +28,7 @@ export interface HostOptions {
   /** Παράθυρο αρπάγματος (online μεγαλώνει με την καθυστέρηση του δικτύου). */
   grabWindowMs?: () => number;
   /** Συνέχιση από αποθηκευμένη κατάσταση (αλλαγή host). */
-  resume?: { state: GameState; reactions: Record<string, number[]> };
+  resume?: { state: GameState; reactions: Record<string, number[]>; stats?: MatchStats };
 }
 
 /**
@@ -38,6 +39,7 @@ export class HostGame {
   state: GameState;
   readonly levels: Record<string, BotLevel>;
   readonly reactions: Record<string, number[]> = {};
+  readonly stats: StatsRecorder;
   turnDeadline = 0;
   decisionDeadline = 0;
   allFlipAt = 0;
@@ -64,6 +66,7 @@ export class HostGame {
     this.state = opts.resume
       ? { ...opts.resume.state, events: [] }
       : createGame(opts.ids, { ...opts.config, symbolCount: opts.symbols.length, seed });
+    this.stats = new StatsRecorder(this.state, opts.resume?.stats);
   }
 
   get symbolMap() {
@@ -97,6 +100,7 @@ export class HostGame {
       decisionLeftMs: this.decisionDeadline ? this.decisionDeadline - now : 0,
       allFlipLeftMs: this.allFlipAt ? this.allFlipAt - now : 0,
       reactions: this.reactions,
+      stats: this.stats.data,
     });
   }
 
@@ -140,6 +144,7 @@ export class HostGame {
 
   private apply(next: GameState) {
     if (next === this.state || this.stopped) return;
+    this.stats.record(this.state, next);
     this.state = next;
     this.emit();
   }

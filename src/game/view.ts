@@ -1,4 +1,5 @@
 import type { Card, GameEvent, GameState, PlayerStats, PlayerStatus } from '../engine';
+import type { MatchStats } from './stats';
 
 /**
  * Ό,τι χρειάζεται μια οθόνη για να ζωγραφίσει το τραπέζι. Ο host το φτιάχνει από την πλήρη
@@ -33,6 +34,8 @@ export interface TableView {
   allFlipLeftMs: number;
   /** Χρόνοι αντίδρασης ανά παίκτη (για τη σύνοψη). */
   reactions: Record<string, number[]>;
+  /** Στατιστικά της παρτίδας (μόνο στο τέλος). */
+  stats: MatchStats | null;
 }
 
 export interface ViewExtras {
@@ -42,6 +45,7 @@ export interface ViewExtras {
   decisionLeftMs: number;
   allFlipLeftMs: number;
   reactions: Record<string, number[]>;
+  stats?: MatchStats;
 }
 
 export function toView(s: GameState, x: ViewExtras): TableView {
@@ -73,5 +77,6 @@ export function toView(s: GameState, x: ViewExtras): TableView {
     decisionLeftMs: Math.max(0, Math.round(x.decisionLeftMs)),
     allFlipLeftMs: Math.max(0, Math.round(x.allFlipLeftMs)),
     reactions: s.phase === 'ended' ? x.reactions : {},
+    stats: s.phase === 'ended' && x.stats ? x.stats : null,
   };
 }
