@@ -6,14 +6,16 @@ export interface PersonalSettings {
 }
 
 const KEY = 'arpagi.settings.v1';
-const DEFAULTS: PersonalSettings = { flipGesture: 'swipe', colorblind: false, lang: 'auto' };
+/** Με ποντίκι το σύρσιμο είναι άβολο: εκεί η προεπιλογή είναι το πάτημα (κλικ). */
+const hasTouch = () => typeof matchMedia === 'function' && matchMedia('(pointer: coarse)').matches;
+const DEFAULTS = (): PersonalSettings => ({ flipGesture: hasTouch() ? 'swipe' : 'tap', colorblind: false, lang: 'auto' });
 
 export function loadSettings(): PersonalSettings {
   try {
     const raw = localStorage.getItem(KEY);
-    return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+    return raw ? { ...DEFAULTS(), ...JSON.parse(raw) } : DEFAULTS();
   } catch {
-    return { ...DEFAULTS };
+    return DEFAULTS();
   }
 }
 

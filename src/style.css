@@ -121,7 +121,12 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .hud .status { flex: 1; font-weight: 600; }
 .hud .pot { opacity: 0.85; font-size: 0.8rem; }
 .quit { min-width: 44px; padding: 0; border: none; font-size: 1.2rem; }
-.game .table { position: relative; }
+.game .table { position: relative; width: 100%; justify-self: center; }
+/* Μεγάλες οθόνες: το τραπέζι έχει μέγιστο πλάτος, ώστε οι αντίπαλοι να κάθονται γύρω από το ξόανο
+   και όχι στις άκρες της οθόνης. */
+@media (min-height: 521px) {
+  .game .table { max-width: min(1100px, calc((100dvh - 170px) * 1.6)); }
+}
 .seat {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -234,7 +239,8 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .dialog p { margin: 0; }
 .dialog .countdown { opacity: 0.8; font-size: 0.85rem; }
 .dialog .toggle.on { background: var(--paper); color: var(--ink); }
-@media (orientation: landscape) {
+/* Πλαϊνή διάταξη μόνο για κινητό σε οριζόντια θέση (λίγο ύψος). Ο υπολογιστής κρατά τη στοίβα κάτω στο κέντρο. */
+@media (orientation: landscape) and (max-height: 520px) {
   .game { grid-template-columns: 1fr auto; grid-template-rows: auto 1fr; }
   .hud { grid-column: 1 / -1; }
   .game .me { flex-direction: column; justify-content: center; gap: 0.6rem; padding: 0.4rem 0.75rem; --cw: min(11vw, 80px, 20dvh); }
