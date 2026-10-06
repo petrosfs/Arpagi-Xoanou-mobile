@@ -105,7 +105,7 @@ export class LocalSession extends BaseSession {
   }
 
   grab(a: Omit<GrabAttempt, 'playerId'>) {
-    this.host.grabBy(this.me, a);
+    this.host.grabBy(this.me, a, this.displayedSeq);
   }
 
   decide(choice: DecisionChoice) {

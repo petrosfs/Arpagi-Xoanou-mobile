@@ -54,6 +54,7 @@ export class HostGame {
   private pending: GrabAttempt[] = [];
   private windowTimer = 0;
   private history = new Map<number, GameState>();
+  private recheckBots = false;
   private rnd: () => number;
   private stopped = false;
 
@@ -228,6 +229,7 @@ export class HostGame {
       this.later(holdLeft, () => {
         this.holdUntil = 0;
         this.heldBy = null;
+        this.recheckBots = true;
         this.schedule();
         this.onChange(this.state);
       });
@@ -250,11 +252,18 @@ export class HostGame {
     this.turnToken = token;
     const ms = this.isBot(cur.id) ? between(this.rnd, BOT_FLIP_MS) : this.opts.turnTimerS * 1000;
     if (!this.isBot(cur.id)) this.turnDeadline = now + ms;
-    this.turnTimer = window.setTimeout(() => {
+    const fire = () => {
+      // Όσο κάποιος αρπάζει το ξόανο, κανείς δεν γυρίζει κάρτα: αλλιώς ένα ταίρι θα καλυπτόταν
+      // ανάμεσα στο άρπαγμα και την κρίση του, και ο σωστός παίκτης θα τιμωρούνταν άδικα.
+      if (this.windowTimer) {
+        this.turnTimer = window.setTimeout(fire, 40);
+        return;
+      }
       this.turnTimer = 0;
       this.turnDeadline = 0;
       this.apply(flip(this.state, cur.id));
-    }, ms);
+    };
+    this.turnTimer = window.setTimeout(fire, ms);
   }
 
   private cancelTurnTimer() {
@@ -267,7 +276,8 @@ export class HostGame {
   /** Κρατά τα σχέδια που ισχύουν ακόμα, ακυρώνει όσα δεν ισχύουν, φτιάχνει νέα σε νέα κάρτα. */
   private updateBotPlans() {
     const s = this.state;
-    const revealed = s.events.some((e) => e.type === 'flip' || e.type === 'allFlip');
+    // Νέα κάρτα, ή επιστροφή του ξόανου: αν μένει μονομαχία στο τραπέζι, συνεχίζει να υφίσταται.
+    const revealed = s.events.some((e) => e.type === 'flip' || e.type === 'allFlip') || this.recheckBots;
     if (this.totemHeld) {
       this.botPlans.forEach((p) => clearTimeout(p.timer));
       this.botPlans.clear();
@@ -282,6 +292,7 @@ export class HostGame {
       }
       if (!this.botPlans.has(id) && revealed && s.phase === 'playing') this.planBotGrab(id, entitled);
     }
+    this.recheckBots = false;
   }
 
   private planBotGrab(id: string, entitled: boolean) {

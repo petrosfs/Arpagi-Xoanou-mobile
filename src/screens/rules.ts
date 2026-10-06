@@ -24,6 +24,8 @@ function body(): string {
     <p>When two visible cards show the <strong>same symbol</strong> (colour does not matter), their owners race to grab the xoanon.
       The fastest wins. The loser takes both face-up piles plus any cards under the xoanon, and the winner starts the next round.</p>
     <p>If there are several losers, the cards are split between them as set before the game.</p>
+    <p>If <strong>two or more duels</strong> happen at once, they are all played: as soon as the xoanon is back in place,
+      any duel still on the table carries on, regardless of whose turn it is.</p>
     <h3>Grabbing the xoanon</h3>
     <ul>
       <li>Tap the xoanon. Your reaction is timed from the moment the card appeared on <em>your</em> screen, so a slow connection does not count against you.</li>
@@ -65,6 +67,8 @@ function body(): string {
       Κερδίζει ο ταχύτερος. Ο χαμένος παίρνει τις ανοιχτές κάρτες και των δύο και ό,τι είναι κάτω από το ξόανο,
       και ο νικητής ξεκινά τον επόμενο γύρο.</p>
     <p>Αν οι χαμένοι είναι πολλοί, οι κάρτες μοιράζονται όπως ορίστηκε πριν την παρτίδα.</p>
+    <p>Αν υπάρχουν <strong>δύο ή περισσότερες μονομαχίες</strong> ταυτόχρονα, παίζονται όλες: μόλις το ξόανο
+      επιστρέψει στη θέση του, όποια μονομαχία είναι ακόμα στο τραπέζι συνεχίζει, ανεξάρτητα από τη σειρά.</p>
     <h3>Πώς αρπάζεις το ξόανο</h3>
     <ul>
       <li>Πάτα το ξόανο. Ο χρόνος σου μετράει από τη στιγμή που φάνηκε η κάρτα στη <em>δική σου</em> οθόνη, οπότε μια αργή σύνδεση δεν σε αδικεί.</li>
