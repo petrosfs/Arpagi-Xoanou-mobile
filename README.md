@@ -108,6 +108,10 @@ npm run build   # build στον φάκελο dist
 επικόλλησε τους κανόνες από το `database.rules.json` και βάλε τα στοιχεία της web εφαρμογής στο
 `src/net/config.ts`.
 
+### Σχόλια και προτάσεις
+
+Έχεις μια ιδέα ή βρήκες πρόβλημα; [Άνοιξε ένα issue](https://github.com/petrosfs/Arpagi-Xoanou-mobile/issues/new/choose) (χρειάζεται λογαριασμός GitHub).
+
 ---
 
 ## English
@@ -188,6 +192,10 @@ npm run build   # build into dist
 
 For your own online setup: create a Firebase project with **Anonymous Authentication** and **Realtime
 Database**, paste the rules from `database.rules.json`, and put your web app config in `src/net/config.ts`.
+
+### Feedback
+
+Have an idea or found a bug? [Open an issue](https://github.com/petrosfs/Arpagi-Xoanou-mobile/issues/new/choose) (GitHub account needed).
 
 ---
 

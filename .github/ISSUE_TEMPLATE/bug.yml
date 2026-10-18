@@ -1,0 +1,52 @@
+name: 🐞 Πρόβλημα / Bug
+description: Κάτι δεν δουλεύει όπως θα έπρεπε · Something does not work as it should.
+title: "[Πρόβλημα] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ⚠️ Τα issues είναι **δημόσια**. Μην γράφεις προσωπικά στοιχεία ή κωδικούς δωματίων.
+        ⚠️ Issues are **public**. Do not include personal information or room codes.
+  - type: textarea
+    id: what
+    attributes:
+      label: Τι έγινε; / What happened?
+      description: Τι περίμενες να γίνει και τι έγινε τελικά.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Βήματα / Steps
+      description: Τι έκανες πριν εμφανιστεί το πρόβλημα (προαιρετικό).
+    validations:
+      required: false
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Παιχνίδι / Mode
+      options:
+        - Online
+        - Solo (με bots / vs bots)
+    validations:
+      required: false
+  - type: input
+    id: version
+    attributes:
+      label: Έκδοση / Version
+      description: Αν τη βλέπεις στην εφαρμογή.
+      placeholder: π.χ. v0.7.2
+    validations:
+      required: false
+  - type: dropdown
+    id: device
+    attributes:
+      label: Συσκευή / Device
+      options:
+        - Κινητό Android / Android phone
+        - iPhone
+        - Υπολογιστής / Computer
+        - Άλλο / Other
+    validations:
+      required: false

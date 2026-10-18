@@ -1,0 +1,12 @@
+name: 💡 Πρόταση / Idea
+description: Πρότεινε κάτι νέο ή μια βελτίωση στο παιχνίδι · Suggest something new or an improvement.
+title: "[Πρόταση] "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: idea
+    attributes:
+      label: Τι θα ήθελες; / What would you like?
+      description: Περίγραψε την ιδέα σου και πώς θα έκανε το παιχνίδι καλύτερο.
+    validations:
+      required: true
